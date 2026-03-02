@@ -4,7 +4,8 @@ from sqlalchemy import create_engine, text
 DB_URL = "sqlite:///movies.db"
 
 # Create the engine
-engine = create_engine(DB_URL, echo=True)
+#engine = create_engine(DB_URL, echo=True)  # Development
+engine = create_engine(DB_URL, echo=False) # Runtime
 
 
 def _init_db():
