@@ -4,7 +4,8 @@ from sqlalchemy import create_engine, text
 DB_URL = "sqlite:///movies.db"
 
 # Create the engine
-#engine = create_engine(DB_URL, echo=True)  # Development
+# echo=True prints all SQL statements SQLAlchemy runs (useful for debugging)
+#engine = create_engine(DB_URL, echo=True) # Development
 engine = create_engine(DB_URL, echo=False) # Runtime
 
 
@@ -33,9 +34,9 @@ def list_movies():
     """Retrieve all movies from the database."""
     with engine.connect() as connection:
         result = connection.execute(text("SELECT title, year, rating FROM movies"))
-        movies = result.fetchall()
+        rows = result.fetchall()
 
-    return {row[0]: {"year": row[1], "rating": row[2]} for row in movies}
+    return {row[0]: {"year": row[1], "rating": row[2]} for row in rows}
 
 
 def add_movie(title, year, rating):
@@ -62,7 +63,6 @@ def delete_movie(title):
             )
             connection.commit()
 
-            # result.rowcount: Anzahl betroffener Zeilen (SQLite unterstützt das in der Regel)
             if result.rowcount == 0:
                 print(f"Movie '{title}' not found.")
             else:

@@ -6,7 +6,7 @@ from statistics import median
 import matplotlib.pyplot
 import plotext
 
-import movie_storage as storage
+import movie_storage_sql as storage
 import movies_plots
 import movies_website
 
@@ -477,7 +477,7 @@ def show_menu():
 
 def main():
     """ Main function of the movies data system"""
-    movies = storage.get_movies()  # Load from JSON
+    movies = storage.list_movies()  # Load from SQLite (SQLAlchemy)
 
     # if JSON is empty
     if not movies:
@@ -494,10 +494,11 @@ def main():
             "Everything Everywhere All At Once": {"rating": 8.9, "year": 2022},
             "Forrest Gump": {"rating": 8.8, "year": 1994},
             "Star Wars: Episode V": {"rating": 8.7, "year": 1980}
-        }
-        storage.save_movies(movies)
-
-    while True:
+        }        # Seed database with starter movies
+        for title, data in movies.items():
+            storage.add_movie(title, data["year"], data["rating"])
+        movies = storage.list_movies()
+while True:
         show_menu()
         choice = get_choice()
         if choice == 12:
