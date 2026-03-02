@@ -1,3 +1,4 @@
 matplotlib
 plotext
+requests
 sqlalchemy

@@ -2,11 +2,12 @@ import random
 import time
 from difflib import get_close_matches
 from statistics import median
-
 import matplotlib.pyplot
 import plotext
+import requests
 
 import movie_storage_sql as storage
+from API_KEY import OMDB_APY_KEY
 import movies_plots
 import movies_website
 
@@ -119,22 +120,88 @@ def get_movie_rating(option=0):
         print("\033[0;31mError: Rating must be greater than 1.0 and no greater than 10.\033[0;0m")
 
 
-def add_movie(movies):
-    """ Adds a movie to the movies database"""
-    title = get_movie_title()
-    rating = get_movie_rating()
-    year = get_movie_year()
+def fetch_movie_from_omdb(search_title):
+    """
+    Fetches movie data from OMDb API by title.
+    Returns dict with title, year, rating, poster_url or None if not found/error.
+    """
+    url = "http://www.omdbapi.com/"
+    params = {"apikey": OMDB_APY_KEY, "t": search_title}
 
-    if title is None or rating is None or year is None:
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print("\033[0;31mError: Could not reach OMDb API. Check your internet connection.\033[0;0m")
+        if hasattr(e, "response") and e.response is not None:
+            print(f"\033[0;31mAPI returned status: {e.response.status_code}\033[0;0m")
+        return None
+
+    data = response.json()
+
+    if data.get("Response") == "False":
+        print("\033[0;31mError: Movie not found in OMDb.\033[0;0m")
+        if data.get("Error"):
+            print(f"\033[0;31m{data['Error']}\033[0;0m")
+        return None
+
+    title = data.get("Title") or ""
+    year_raw = data.get("Year") or "N/A"
+    rating_raw = data.get("imdbRating") or "N/A"
+    poster_url = data.get("Poster") or ""
+
+    try:
+        year = int(year_raw) if year_raw != "N/A" and year_raw.strip() else 0
+    except (ValueError, TypeError):
+        year = 0
+
+    try:
+        rating = float(rating_raw) if rating_raw != "N/A" and str(rating_raw).strip() else 0.0
+    except (ValueError, TypeError):
+        rating = 0.0
+
+    return {
+        "title": title,
+        "year": year,
+        "rating": rating,
+        "poster_url": poster_url if isinstance(poster_url, str) else "",
+    }
+
+
+def add_movie(movies):
+    """Adds a movie to the database by searching OMDb with the given title."""
+    title = get_movie_title()
+    if title is None:
         return
 
-    if title not in movies:
-        storage.add_movie(title, year, rating)
-        movies[title] = {"rating": rating, "year": year}
-        print(f"\033[0;32mSuccess: '{title}' added (year {year}) with a "
-              f"rating of {rating}.\033[0;0m")
-    else:
+    if title in movies:
         print(f"Movie '{title}' is already present in the list of movies.")
+        return
+
+    data = fetch_movie_from_omdb(title)
+    if data is None:
+        return
+
+    api_title = data["title"]
+    if api_title in movies:
+        print(f"Movie '{api_title}' is already present in the list of movies.")
+        return
+
+    storage.add_movie(
+        data["title"],
+        data["year"],
+        data["rating"],
+        data["poster_url"],
+    )
+    movies[api_title] = {
+        "rating": data["rating"],
+        "year": data["year"],
+        "poster_url": data["poster_url"],
+    }
+    print(
+        f"\033[0;32mSuccess: '{api_title}' added (year {data['year']}) with a "
+        f"rating of {data['rating']}.\033[0;0m"
+    )
 
 
 def remove_movie(movies):
@@ -479,26 +546,30 @@ def main():
     """ Main function of the movies data system"""
     movies = storage.list_movies()  # Load from SQLite (SQLAlchemy)
 
-    # if JSON is empty
+    # if database is empty, seed with starter movies (no poster_url for seed)
     if not movies:
-        # Dictionary to store the movies and the rating
-        movies = {
-            "The Shawshank Redemption": {"rating": 4.5, "year": 1994},
-            "Pulp Fiction": {"rating": 4.8, "year": 1994},
-            "The Room": {"rating": 3.6, "year": 2003},
-            "The Godfather": {"rating": 9.2, "year": 1972},
-            "The Godfather: Part II": {"rating": 3.0, "year": 1974},
-            "The Dark Knight": {"rating": 2.0, "year": 2008},
-            "The Dark": {"rating": 2.0, "year": 2008},
-            "12 Angry Men": {"rating": 6.9, "year": 1957},
-            "Everything Everywhere All At Once": {"rating": 8.9, "year": 2022},
-            "Forrest Gump": {"rating": 8.8, "year": 1994},
-            "Star Wars: Episode V": {"rating": 8.7, "year": 1980}
-        }        # Seed database with starter movies
-        for title, data in movies.items():
-            storage.add_movie(title, data["year"], data["rating"])
+        seed_movies = {
+            "The Shawshank Redemption": {"rating": 4.5, "year": 1994, "poster_url": ""},
+            "Pulp Fiction": {"rating": 4.8, "year": 1994, "poster_url": ""},
+            "The Room": {"rating": 3.6, "year": 2003, "poster_url": ""},
+            "The Godfather": {"rating": 9.2, "year": 1972, "poster_url": ""},
+            "The Godfather: Part II": {"rating": 3.0, "year": 1974, "poster_url": ""},
+            "The Dark Knight": {"rating": 2.0, "year": 2008, "poster_url": ""},
+            "The Dark": {"rating": 2.0, "year": 2008, "poster_url": ""},
+            "12 Angry Men": {"rating": 6.9, "year": 1957, "poster_url": ""},
+            "Everything Everywhere All At Once": {"rating": 8.9, "year": 2022, "poster_url": ""},
+            "Forrest Gump": {"rating": 8.8, "year": 1994, "poster_url": ""},
+            "Star Wars: Episode V": {"rating": 8.7, "year": 1980, "poster_url": ""},
+        }
+        for title, data in seed_movies.items():
+            storage.add_movie(
+                title,
+                data["year"],
+                data["rating"],
+                data.get("poster_url", ""),
+            )
         movies = storage.list_movies()
-while True:
+    while True:
         show_menu()
         choice = get_choice()
         if choice == 12:
