@@ -3,8 +3,12 @@
 /workspace.xml
 # Editor-based HTTP Client requests
 /httpRequests/
+# Database (lies in data/)
+/data/*.db
+
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
 /.idea
-/__pycache__
+__pycache__
+__init__.py
