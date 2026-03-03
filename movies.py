@@ -33,7 +33,7 @@ def get_movie_year(option=0):
       2 -> optional end year (filter; blank = None)
     """
     while True:
-        prompt = "Enter year of release: "
+        prompt = "Enter ye2ar of release: "
         if option == 1:
             prompt = "Enter start year of releases (leave blank for no start year): "
         elif option == 2:
@@ -225,23 +225,21 @@ def remove_movie(movies, current_user):
 
 
 def update_movie(movies, current_user):
-    """Updates a movie in the current user's database."""
+    """Updates a movie's note in the current user's database."""
     title = get_movie_title()
 
     if title is None:
         return
 
-    if title in movies.keys():
-        print(f"Updating movie {title} from database.")
-        rating = get_movie_rating()
-        if rating is None:
-            return
-        storage.update_movie(current_user[0], title, rating)
-        print(f"\033[0;32mSuccess: '{title}' updated with a "
-              f"rating of {rating}.\033[0;0m")
-    else:
-        print(f"movie {title} not in database. Trying improved fuzzy research")
+    if title not in movies.keys():
+        print(f"Movie '{title}' not in database. Trying improved fuzzy search.")
         improved_fuzzy_search(movies, title)
+        return
+
+    note_input = input("Enter movie note: ").strip()
+    storage.update_movie(current_user[0], title, note_input)
+    movies[title] = {**movies[title], "note": note_input}
+    print(f"Movie {title} successfully updated.")
 
 
 def filter_movies(movies, current_user=None):

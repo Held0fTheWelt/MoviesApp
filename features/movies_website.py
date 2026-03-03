@@ -9,19 +9,26 @@ def _escape(s):
 
 def _build_movie_grid(movies):
     """Build the HTML for the movie grid from the movies dictionary.
-    Each item: li > div.movie > img.movie-poster, div.movie-title, div.movie-year.
+    Each item: li > div.movie > poster wrapper (img + note overlay), div.movie-title, div.movie-year.
+    Note is shown on hover over the poster.
     """
     lines = []
     for title, data in movies.items():
         year = data.get("year", "")
         poster_url = data.get("poster_url", "") or ""
+        note = data.get("note", "") or ""
         title_esc = _escape(title)
         year_esc = _escape(year)
         poster_esc = _escape(poster_url)
+        note_esc = _escape(note)
+        note_content = f'<div class="movie-note">{note_esc}</div>' if note_esc else ""
         lines.append(
             "        <li>\n"
             "            <div class=\"movie\">\n"
-            f"                <img class=\"movie-poster\" src=\"{poster_esc}\" title=\"\">\n"
+            "                <div class=\"movie-poster-wrap\">\n"
+            f"                <img class=\"movie-poster\" src=\"{poster_esc}\" alt=\"{title_esc}\">\n"
+            f"                {note_content}\n"
+            "                </div>\n"
             f"                <div class=\"movie-title\">{title_esc}</div>\n"
             f"                <div class=\"movie-year\">{year_esc}</div>\n"
             "            </div>\n"

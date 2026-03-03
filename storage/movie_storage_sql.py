@@ -47,6 +47,7 @@ def _init_db():
                         year INTEGER NOT NULL,
                         rating REAL NOT NULL,
                         poster_url TEXT,
+                        note TEXT,
                         UNIQUE(user_id, title),
                         FOREIGN KEY (user_id) REFERENCES users(id)
                     )
@@ -62,17 +63,23 @@ def _init_db():
             connection.execute(text("UPDATE movies SET user_id = 1 WHERE user_id IS NULL"))
             connection.commit()
             # Recreate with proper UNIQUE(user_id, title) - SQLite can't add composite UNIQUE via ALTER
-            connection.execute(text("CREATE TABLE movies_new (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, year INTEGER NOT NULL, rating REAL NOT NULL, poster_url TEXT, UNIQUE(user_id, title))"))
-            connection.execute(text("INSERT INTO movies_new (user_id, title, year, rating, poster_url) SELECT COALESCE(user_id, 1), title, year, rating, COALESCE(poster_url, '') FROM movies"))
+            connection.execute(text("CREATE TABLE movies_new (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, year INTEGER NOT NULL, rating REAL NOT NULL, poster_url TEXT, note TEXT, UNIQUE(user_id, title))"))
+            connection.execute(text("INSERT INTO movies_new (user_id, title, year, rating, poster_url, note) SELECT COALESCE(user_id, 1), title, year, rating, COALESCE(poster_url, ''), '' FROM movies"))
             connection.commit()
             connection.execute(text("DROP TABLE movies"))
             connection.execute(text("ALTER TABLE movies_new RENAME TO movies"))
             connection.commit()
         else:
-            # Ensure poster_url exists (older migration)
+            # Ensure poster_url and note exist (older migrations)
             if "poster_url" not in columns:
                 try:
                     connection.execute(text("ALTER TABLE movies ADD COLUMN poster_url TEXT"))
+                    connection.commit()
+                except Exception:
+                    pass
+            if "note" not in columns:
+                try:
+                    connection.execute(text("ALTER TABLE movies ADD COLUMN note TEXT"))
                     connection.commit()
                 except Exception:
                     pass
@@ -111,7 +118,7 @@ def list_movies(user_id):
     """Retrieve all movies for the given user."""
     with engine.connect() as connection:
         result = connection.execute(
-            text("SELECT title, year, rating, poster_url FROM movies WHERE user_id = :user_id"),
+            text("SELECT title, year, rating, poster_url, note FROM movies WHERE user_id = :user_id"),
             {"user_id": user_id},
         )
         rows = result.fetchall()
@@ -121,20 +128,22 @@ def list_movies(user_id):
             "year": row[1],
             "rating": row[2],
             "poster_url": row[3] or "",
+            "note": row[4] or "",
         }
         for row in rows
     }
 
 
-def add_movie(user_id, title, year, rating, poster_url=None):
+def add_movie(user_id, title, year, rating, poster_url=None, note=None):
     """Add a new movie for the given user."""
     poster_url = poster_url if poster_url is not None else ""
+    note = note if note is not None else ""
     with engine.connect() as connection:
         try:
             connection.execute(
                 text(
-                    "INSERT INTO movies (user_id, title, year, rating, poster_url) "
-                    "VALUES (:user_id, :title, :year, :rating, :poster_url)"
+                    "INSERT INTO movies (user_id, title, year, rating, poster_url, note) "
+                    "VALUES (:user_id, :title, :year, :rating, :poster_url, :note)"
                 ),
                 {
                     "user_id": user_id,
@@ -142,6 +151,7 @@ def add_movie(user_id, title, year, rating, poster_url=None):
                     "year": year,
                     "rating": rating,
                     "poster_url": poster_url,
+                    "note": note,
                 },
             )
             connection.commit()
@@ -168,20 +178,20 @@ def delete_movie(user_id, title):
             print(f"Error: {e}")
 
 
-def update_movie(user_id, title, rating):
-    """Update a movie's rating for the given user."""
+def update_movie(user_id, title, note):
+    """Update a movie's note for the given user."""
     with engine.connect() as connection:
         try:
             result = connection.execute(
-                text("UPDATE movies SET rating = :rating WHERE user_id = :user_id AND title = :title"),
-                {"user_id": user_id, "title": title, "rating": rating},
+                text("UPDATE movies SET note = :note WHERE user_id = :user_id AND title = :title"),
+                {"user_id": user_id, "title": title, "note": note or ""},
             )
             connection.commit()
 
             if result.rowcount == 0:
                 print(f"Movie '{title}' not found.")
             else:
-                print(f"Movie '{title}' updated successfully.")
+                print(f"Movie {title} successfully updated.")
         except Exception as e:
             print(f"Error: {e}")
 

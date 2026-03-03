@@ -1,6 +1,6 @@
 # My Movies Database
 
-Kleine Konsolen-Anwendung zur Verwaltung einer Filmdatenbank. Filme werden per **OMDb API** gesucht und mit Titel, Jahr, Bewertung und Poster-URL gespeichert.
+Kleine Konsolen-App zur persönlichen Filmdatenbank. Jeder Nutzer hat eine eigene Sammlung; Filme werden per **OMDb API** geladen (Titel, Jahr, Bewertung, Poster). Zu jedem Film kann eine **Notiz** gespeichert werden.
 
 ## Voraussetzungen
 
@@ -13,7 +13,7 @@ Kleine Konsolen-Anwendung zur Verwaltung einer Filmdatenbank. Filme werden per *
 pip install -r requirements.txt
 ```
 
-In `API_KEY.py` den eigenen OMDb-Key eintragen:
+In `API_KEY.py` den eigenen Key eintragen:
 
 ```python
 OMDB_APY_KEY = 'dein-api-key'
@@ -25,15 +25,22 @@ OMDB_APY_KEY = 'dein-api-key'
 python movies.py
 ```
 
+Beim Start wählst du einen **Nutzer** (oder legst einen neuen an). Alle Filme und Notizen gehören zu diesem Nutzer.
+
 ## Funktionen
 
-- **Filme auflisten** – alle gespeicherten Filme anzeigen
-- **Film hinzufügen** – nur Filmtitel eingeben, Rest kommt von OMDb
+- **Filme auflisten** – nur die Filme des aktuellen Nutzers
+- **Film hinzufügen** – Filmtitel eingeben → OMDb liefert Daten → Notiz optional eingeben
 - **Film löschen**
-- **Film aktualisieren** (Bewertung)
-- **Statistiken** – Durchschnitt, Median, bester/schlechtester Film
-- **Zufallsfilm**, **Suchen**, **Filtern**, **Sortieren**
+- **Film aktualisieren** – Notiz zu einem Film setzen oder ändern
+- **Nutzer wechseln** – zu einem anderen Profil wechseln
+- **Statistiken**, **Zufallsfilm**, **Suchen**, **Filtern**, **Sortieren**
 - **Rating-Histogramm** (Konsole oder PNG)
-- **Website generieren** – erzeugt `_static/index.html` aus den Filmdaten
+- **Website generieren** – erzeugt z. B. `_static/John.html` mit der Sammlung des Nutzers; Notizen erscheinen beim Hover über das Poster
 
-Die Daten werden in einer SQLite-Datenbank unter `data/movies.db` gespeichert. Das Verzeichnis `data/` wird beim ersten Start angelegt. Die Speicherlogik liegt im Paket `storage/` (z. B. `storage/sql.py`).
+## Projektstruktur
+
+- **`data/`** – SQLite-Datenbank (`movies.db`), wird beim ersten Start angelegt
+- **`storage/`** – Speicherlogik (Nutzer, Filme, Notizen)
+- **`features/`** – Website-Generierung, Plots
+- **`_static/`** – HTML-Vorlage und generierte Webseiten
