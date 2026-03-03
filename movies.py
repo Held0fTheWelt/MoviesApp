@@ -6,10 +6,9 @@ import matplotlib.pyplot
 import plotext
 import requests
 
-import movie_storage_sql as storage
+import storage
 from API_KEY import OMDB_APY_KEY
-import movies_plots
-import movies_website
+from features import movies_website, movies_plots
 
 ABORT_MESSAGE = "Abort"
 

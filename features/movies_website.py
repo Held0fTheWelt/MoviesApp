@@ -33,9 +33,9 @@ def _build_movie_grid(movies):
 def generate_website(movies, title="My Movie App"):
     """
     Generate index.html from the template and the current movies.
-    Template and output are in _static (same directory as style.css).
+    Template and output are in project root's _static (same directory as style.css).
     """
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     static_dir = os.path.join(base_dir, "_static")
     template_path = os.path.join(static_dir, "index_template.html")
     output_path = os.path.join(static_dir, "index.html")

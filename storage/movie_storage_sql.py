@@ -1,12 +1,17 @@
+import os
+
 from sqlalchemy import create_engine, text
 
-# Define the database URL
-DB_URL = "sqlite:///movies.db"
+# Database in project's data/ directory
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_DATA_DIR = os.path.join(_BASE_DIR, "data")
+os.makedirs(_DATA_DIR, exist_ok=True)
+_DB_PATH = os.path.join(_DATA_DIR, "movies.db")
+DB_URL = "sqlite:///" + _DB_PATH.replace("\\", "/")
 
-# Create the engine
-# echo=True prints all SQL statements SQLAlchemy runs (useful for debugging)
-#engine = create_engine(DB_URL, echo=True) # Development
-engine = create_engine(DB_URL, echo=False) # Runtime
+# echo=True prints all SQL statements (useful for debugging)
+# engine = create_engine(DB_URL, echo=True)
+engine = create_engine(DB_URL, echo=False)
 
 
 def _init_db():
