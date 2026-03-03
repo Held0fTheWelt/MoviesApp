@@ -76,9 +76,10 @@ def _get_country_and_flag(title: str, imdb_id: str) -> tuple[str, str]:
 
 
 def _build_movie_grid(movies):
-    """Build the HTML for the movie grid from the movies dictionary.
-    Each item: li > div.movie > poster wrapper (img + note overlay), title, country-flag image, year, rating.
-    Note is shown on hover over the poster.
+    """Build the HTML for the movie grid.
+
+    Each item: li > div.movie > poster wrapper (img + note overlay),
+    title, country-flag image, year, rating. Note is shown on hover.
     """
     lines = []
     for title, data in movies.items():
@@ -105,15 +106,19 @@ def _build_movie_grid(movies):
         country_node = ""
         if flag_url_esc:
             country_node = (
-                f'<div class="movie-country">'
-                f'<img class="movie-flag" src="{flag_url_esc}" alt="{country_esc} flag" loading="lazy">'
-                f"</div>"
+                '<div class="movie-country">'
+                f'<img class="movie-flag" src="{flag_url_esc}" '
+                f'alt="{country_esc} flag" loading="lazy">'
+                "</div>"
             )
 
-        imdb_url = f"https://www.imdb.com/title/{imdb_id_esc}/" if imdb_id_esc else ""
+        imdb_url = (
+            f"https://www.imdb.com/title/{imdb_id_esc}/" if imdb_id_esc else ""
+        )
         if imdb_url:
             poster_block = (
-                f'<a class="movie-poster-link" href="{imdb_url}" target="_blank" rel="noopener noreferrer">\n'
+                '<a class="movie-poster-link" href="'
+                f'{imdb_url}" target="_blank" rel="noopener noreferrer">\n'
                 '                <div class="movie-poster-wrap">\n'
                 f'                <img class="movie-poster" src="{poster_esc}" alt="{title_esc}">\n'
                 f"                {note_content}\n"
@@ -171,5 +176,6 @@ def generate_website(movies, title="My Movie App", output_filename=None):
     print("Website was generated successfully.")
 
 
-def create_rating_histogram(movies):
-    pass
+def create_rating_histogram(_movies):
+    """Placeholder kept for backwards compatibility."""
+    return None

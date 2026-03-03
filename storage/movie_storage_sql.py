@@ -63,9 +63,43 @@ def _init_db():
             connection.execute(text("ALTER TABLE movies ADD COLUMN user_id INTEGER"))
             connection.execute(text("UPDATE movies SET user_id = 1 WHERE user_id IS NULL"))
             connection.commit()
-            # Recreate with proper UNIQUE(user_id, title) - SQLite can't add composite UNIQUE via ALTER
-            connection.execute(text("CREATE TABLE movies_new (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, year INTEGER NOT NULL, rating REAL NOT NULL, poster_url TEXT, note TEXT, imdb_id TEXT, UNIQUE(user_id, title))"))
-            connection.execute(text("INSERT INTO movies_new (user_id, title, year, rating, poster_url, note, imdb_id) SELECT COALESCE(user_id, 1), title, year, rating, COALESCE(poster_url, ''), '', '' FROM movies"))
+            # Recreate with proper UNIQUE(user_id, title) - SQLite can't add composite
+            # UNIQUE via ALTER
+            connection.execute(
+                text(
+                    """
+                    CREATE TABLE movies_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        title TEXT NOT NULL,
+                        year INTEGER NOT NULL,
+                        rating REAL NOT NULL,
+                        poster_url TEXT,
+                        note TEXT,
+                        imdb_id TEXT,
+                        UNIQUE(user_id, title)
+                    )
+                    """
+                ),
+            )
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO movies_new (
+                        user_id, title, year, rating, poster_url, note, imdb_id
+                    )
+                    SELECT
+                        COALESCE(user_id, 1),
+                        title,
+                        year,
+                        rating,
+                        COALESCE(poster_url, ''),
+                        '',
+                        ''
+                    FROM movies
+                    """
+                ),
+            )
             connection.commit()
             connection.execute(text("DROP TABLE movies"))
             connection.execute(text("ALTER TABLE movies_new RENAME TO movies"))
@@ -104,7 +138,10 @@ def add_user(name):
     """Create a new user. Returns user id or None on error."""
     with engine.connect() as connection:
         try:
-            connection.execute(text("INSERT INTO users (name) VALUES (:name)"), {"name": name.strip()})
+            connection.execute(
+                text("INSERT INTO users (name) VALUES (:name)"),
+                {"name": name.strip()},
+            )
             connection.commit()
             result = connection.execute(text("SELECT last_insert_rowid()"))
             return result.scalar()
@@ -116,7 +153,10 @@ def add_user(name):
 def get_user_by_id(user_id):
     """Return (id, name) for user or None."""
     with engine.connect() as connection:
-        result = connection.execute(text("SELECT id, name FROM users WHERE id = :id"), {"id": user_id})
+        result = connection.execute(
+            text("SELECT id, name FROM users WHERE id = :id"),
+            {"id": user_id},
+        )
         row = result.fetchone()
         return row
 
@@ -125,7 +165,10 @@ def list_movies(user_id):
     """Retrieve all movies for the given user."""
     with engine.connect() as connection:
         result = connection.execute(
-            text("SELECT title, year, rating, poster_url, note, imdb_id FROM movies WHERE user_id = :user_id"),
+            text(
+                "SELECT title, year, rating, poster_url, note, imdb_id "
+                "FROM movies WHERE user_id = :user_id"
+            ),
             {"user_id": user_id},
         )
         rows = result.fetchall()

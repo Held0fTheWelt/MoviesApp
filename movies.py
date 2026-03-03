@@ -8,7 +8,7 @@ import requests
 
 import storage
 from API_KEY import OMDB_APY_KEY
-from features import movies_website, movies_plots
+from features import movies_website
 
 ABORT_MESSAGE = "Abort"
 
@@ -17,7 +17,11 @@ def movies_database_is_not_empty(movies, user_name=None):
     """Checks if the database is empty. If user_name is given, message is personalized."""
     if len(movies) == 0:
         if user_name:
-            print(f"\033[0;33m📢 {user_name}, your movie collection is empty. Add some movies!\033[0;0m")
+            print(
+                "\033[0;33m📢 "
+                f"{user_name}, your movie collection is empty. Add some movies!"
+                "\033[0;0m",
+            )
         else:
             print("No movies found.")
         return False
