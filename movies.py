@@ -13,10 +13,13 @@ from features import movies_website, movies_plots
 ABORT_MESSAGE = "Abort"
 
 
-def movies_database_is_not_empty(movies):
-    """ Checks if the database is empty"""
+def movies_database_is_not_empty(movies, user_name=None):
+    """Checks if the database is empty. If user_name is given, message is personalized."""
     if len(movies) == 0:
-        print("No movies found.")
+        if user_name:
+            print(f"\033[0;33m📢 {user_name}, your movie collection is empty. Add some movies!\033[0;0m")
+        else:
+            print("No movies found.")
         return False
     return True
 
@@ -167,7 +170,7 @@ def fetch_movie_from_omdb(search_title):
     }
 
 
-def add_movie(movies):
+def add_movie(movies, current_user):
     """Adds a movie to the database by searching OMDb with the given title."""
     title = get_movie_title()
     if title is None:
@@ -187,6 +190,7 @@ def add_movie(movies):
         return
 
     storage.add_movie(
+        current_user[0],
         data["title"],
         data["year"],
         data["rating"],
@@ -197,14 +201,11 @@ def add_movie(movies):
         "year": data["year"],
         "poster_url": data["poster_url"],
     }
-    print(
-        f"\033[0;32mSuccess: '{api_title}' added (year {data['year']}) with a "
-        f"rating of {data['rating']}.\033[0;0m"
-    )
+    print(f"\033[0;32m✅ Movie '{api_title}' added to {current_user[1]}'s collection!\033[0;0m")
 
 
-def remove_movie(movies):
-    """ Removes a movie from the movies database"""
+def remove_movie(movies, current_user):
+    """Removes a movie from the current user's database."""
     title = get_movie_title()
 
     if title is None:
@@ -212,7 +213,7 @@ def remove_movie(movies):
 
     if title in movies.keys():
         print(f"Deleting movie {title} from database.")
-        storage.delete_movie(title)
+        storage.delete_movie(current_user[0], title)
         print(f"\033[0;32mSuccess: '{title}' deleted from dictionary.\033[0;0m")
         time.sleep(0.25)
         print("Returning to menu")
@@ -223,8 +224,8 @@ def remove_movie(movies):
         print()
 
 
-def update_movie(movies):
-    """ Updates a movie in the movies database"""
+def update_movie(movies, current_user):
+    """Updates a movie in the current user's database."""
     title = get_movie_title()
 
     if title is None:
@@ -233,7 +234,9 @@ def update_movie(movies):
     if title in movies.keys():
         print(f"Updating movie {title} from database.")
         rating = get_movie_rating()
-        storage.update_movie(title, rating)
+        if rating is None:
+            return
+        storage.update_movie(current_user[0], title, rating)
         print(f"\033[0;32mSuccess: '{title}' updated with a "
               f"rating of {rating}.\033[0;0m")
     else:
@@ -241,9 +244,9 @@ def update_movie(movies):
         improved_fuzzy_search(movies, title)
 
 
-def filter_movies(movies):
-    """ filter a list of movies based on specific criteria"""
-    if movies_database_is_not_empty(movies):
+def filter_movies(movies, current_user=None):
+    """Filter a list of movies based on specific criteria."""
+    if movies_database_is_not_empty(movies, current_user[1] if current_user else None):
         minimum_rating = get_movie_rating(1)
         start_year = get_movie_year(1)
         end_year = get_movie_year(2)
@@ -273,9 +276,9 @@ def filter_movies(movies):
         print()
 
 
-def random_movie(movies):
-    """ Prints out a random movie of the movies database"""
-    if movies_database_is_not_empty(movies):
+def random_movie(movies, current_user=None):
+    """Prints out a random movie of the movies database."""
+    if movies_database_is_not_empty(movies, current_user[1] if current_user else None):
         title, values = random.choice(list(movies.items()))
         print(f"Your new random movie is {title} was released in the year {values['year']}"
               f" and it has a rating of {values['rating']}.")
@@ -300,9 +303,9 @@ def improved_fuzzy_search(movies, search_term):
         print()
 
 
-def search_movies(movies):
+def search_movies(movies, current_user=None):
     """Searches for movies by (partial) title. Falls back to fuzzy suggestions."""
-    if not movies_database_is_not_empty(movies):
+    if not movies_database_is_not_empty(movies, current_user[1] if current_user else None):
         return
 
     search_term = get_movie_title(True)
@@ -381,9 +384,9 @@ def print_movies_information(movies, best=True):
                       f"with a rating of: {values['rating']}")
 
 
-def stats(movies):
+def stats(movies, current_user=None):
     """Prints stats about the movie database."""
-    if not movies_database_is_not_empty(movies):
+    if not movies_database_is_not_empty(movies, current_user[1] if current_user else None):
         return
 
     avg = get_average_rating(movies)
@@ -420,8 +423,10 @@ def get_sort_option():
     return option.lower() == "rating"
 
 
-def sorted_movies(movies):
-    """ sorts movie by rating or year based on chosen option"""
+def sorted_movies(movies, current_user=None):
+    """Sorts movie by rating or year based on chosen option."""
+    if not movies_database_is_not_empty(movies, current_user[1] if current_user else None):
+        return
     option = get_sort_option()
     movies_sorted = {}
     if option:
@@ -431,8 +436,10 @@ def sorted_movies(movies):
     print_all_movies_data(movies_sorted)
 
 
-def sorted_by_name(movies):
-    """ Sorts movies by name ascending """
+def sorted_by_name(movies, current_user=None):
+    """Sorts movies by name ascending (list movies)."""
+    if not movies_database_is_not_empty(movies, current_user[1] if current_user else None):
+        return
     movies_sorted = sorted(movies.items())
     print_all_movies_data(movies_sorted)
 
@@ -462,8 +469,10 @@ def create_matplotlib_histogram(ratings):
     print(f"Histogram saved as: {filename}")
 
 
-def create_rating_histogram(movies):
-    """Asks for option of console or png histogram, then calls function"""
+def create_rating_histogram(movies, current_user=None):
+    """Asks for option of console or png histogram, then calls function."""
+    if not movies_database_is_not_empty(movies, current_user[1] if current_user else None):
+        return
     option = ""
     while True:
         option = input("Enter histogram option (console or png): ").strip()
@@ -479,111 +488,129 @@ def create_rating_histogram(movies):
     print()
 
 
-def run_choice(choice, movies):
-    """ Runs the chosen functionality by accessing corresponding function """
+def run_choice(choice, movies, current_user):
+    """Runs the chosen functionality by accessing corresponding function."""
     if choice == 1:
-        sorted_by_name(movies)
+        sorted_by_name(movies, current_user)
     elif choice == 2:
-        add_movie(movies)
+        add_movie(movies, current_user)
     elif choice == 3:
-        remove_movie(movies)
+        remove_movie(movies, current_user)
     elif choice == 4:
-        update_movie(movies)
+        update_movie(movies, current_user)
     elif choice == 5:
-        stats(movies)
+        pass  # Switch user – handled in main by breaking to profile selection
     elif choice == 6:
-        random_movie(movies)
+        stats(movies, current_user)
     elif choice == 7:
-        search_movies(movies)
+        random_movie(movies, current_user)
     elif choice == 8:
-        sorted_movies(movies)
+        search_movies(movies, current_user)
     elif choice == 9:
-        create_rating_histogram(movies)
+        sorted_movies(movies, current_user)
     elif choice == 10:
-        filter_movies(movies)
+        create_rating_histogram(movies, current_user)
     elif choice == 11:
-        movies_website.generate_website(movies)
+        filter_movies(movies, current_user)
+    elif choice == 12:
+        movies_website.generate_website(movies, output_filename=f"{current_user[1]}.html")
 
 
 def get_choice():
-    """ Asks for user input to choose movies system functionality """
+    """Asks for user input to choose movies system functionality."""
     choice = 0
-    while choice == 0 or choice > 12:
-        choiceinput = input("Enter choice (1-12): ")
+    while choice == 0 or choice > 13:
+        choiceinput = input("Enter choice (1-13): ")
         try:
             choice = int(choiceinput)
-            if choice < 1 or choice > 12:
-                print("\033[0;31mError: Please enter a number between 1 and 12.\033[0;0m")
+            if choice < 1 or choice > 13:
+                print("\033[0;31mError: Please enter a number between 1 and 13.\033[0;0m")
         except ValueError:
             print("\033[0;31mInvalid input. Please enter a whole number.\033[0;0m")
-            choice = 0  # Reset choice to stay in the loop
+            choice = 0
     print("")
     return choice
 
 
-def show_menu():
-    """ Prints the menu to screen"""
+def show_menu(user_name=None):
+    """Prints the menu to screen. If user_name is set, show welcome for that user."""
     print("*" * 10 + "My Movies Database" + "*" * 10)
-    print("")
+    if user_name:
+        print(f"\nWelcome back, {user_name}! 🎬\n")
     print("Menu:")
     print("1. List movies")
     print("2. Add movie")
     print("3. Delete movie")
     print("4. Update movie")
-    print("5. Stats")
-    print("6. Random movie")
-    print("7. Search movie")
-    print("8. Movies sorted by rating or year")
-    print("9. Create Rating Histogram")
-    print("10. Filter Movies")
-    print("11. Generate Website")
-    print("12. Exit")
+    print("5. Switch user")
+    print("6. Stats")
+    print("7. Random movie")
+    print("8. Search movie")
+    print("9. Movies sorted by rating or year")
+    print("10. Create Rating Histogram")
+    print("11. Filter Movies")
+    print("12. Generate Website")
+    print("13. Exit")
     print("")
 
 
-def main():
-    """ Main function of the movies data system"""
-    movies = storage.list_movies()  # Load from SQLite (SQLAlchemy)
+def select_user():
+    """
+    Show profile selection. Returns (user_id, user_name) or None to exit.
+    """
+    print("\nWelcome to the Movie App! 🎬\n")
+    print("Select a user:")
+    users = storage.list_users()
+    create_option = len(users) + 1
+    for i, (uid, name) in enumerate(users, start=1):
+        print(f"{i}. {name}")
+    print(f"{create_option}. Create new user")
+    print("")
 
-    # if database is empty, seed with starter movies via OMDb API
-    if not movies:
-        seed_titles = [
-            "The Shawshank Redemption",
-            "Pulp Fiction",
-            "The Room",
-            "The Godfather",
-            "The Godfather: Part II",
-            "The Dark Knight",
-            "12 Angry Men",
-            "Everything Everywhere All At Once",
-            "Forrest Gump",
-            "Star Wars: Episode V - The Empire Strikes Back",
-        ]
-        for search_title in seed_titles:
-            data = fetch_movie_from_omdb(search_title)
-            if data is None:
-                continue
-            api_title = data["title"]
-            if api_title not in movies:
-                storage.add_movie(
-                    data["title"],
-                    data["year"],
-                    data["rating"],
-                    data["poster_url"],
-                )
-                movies[api_title] = {
-                    "rating": data["rating"],
-                    "year": data["year"],
-                    "poster_url": data["poster_url"],
-                }
-        movies = storage.list_movies()
     while True:
-        show_menu()
-        choice = get_choice()
-        if choice == 12:
+        try:
+            choiceinput = input("Enter choice: ").strip()
+            choice = int(choiceinput)
+        except ValueError:
+            print("\033[0;31mInvalid input. Please enter a number.\033[0;0m")
+            continue
+        if choice == create_option:
+            name = input("Enter new user name: ").strip()
+            if not name:
+                print("\033[0;31mName cannot be empty.\033[0;0m")
+                continue
+            user_id = storage.add_user(name)
+            if user_id is None:
+                continue
+            return (user_id, name)
+        if 1 <= choice < create_option:
+            uid, name = users[choice - 1]
+            return (uid, name)
+        print("\033[0;31mInvalid choice.\033[0;0m")
+
+
+def main():
+    """Main function of the movies data system."""
+    while True:
+        current_user = select_user()
+        if current_user is None:
             break
-        run_choice(choice, movies)
-        time.sleep(1)
+        user_id, user_name = current_user
+        movies = storage.list_movies(user_id)
+
+        while True:
+            show_menu(user_name)
+            choice = get_choice()
+            if choice == 13:
+                break
+            if choice == 5:
+                break  # Switch user – go back to profile selection
+            run_choice(choice, movies, current_user)
+            if choice in (2, 3, 4):
+                movies = storage.list_movies(user_id)
+            time.sleep(0.5 if choice in (2, 3, 4) else 1)
+        if choice == 13:
+            break
 
 
 if __name__ == "__main__":

@@ -15,53 +15,104 @@ engine = create_engine(DB_URL, echo=False)
 
 
 def _init_db():
-    """Create the movies table if it does not exist. Migrates old schema (no poster_url) by recreating the table."""
+    """Create users and movies tables. Migrate old schema (no user_id) if needed."""
     with engine.connect() as connection:
+        # Users table
         connection.execute(
             text(
                 """
-                CREATE TABLE IF NOT EXISTS movies (
+                CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT UNIQUE NOT NULL,
-                    year INTEGER NOT NULL,
-                    rating REAL NOT NULL,
-                    poster_url TEXT
+                    name TEXT UNIQUE NOT NULL
                 )
                 """
             )
         )
         connection.commit()
 
-        # Migration: if table existed without poster_url, it has no such column
+        # Movies table (with user_id)
         result = connection.execute(text("PRAGMA table_info(movies)"))
-        columns = [row[1] for row in result.fetchall()]
-        if "poster_url" not in columns:
-            connection.execute(text("DROP TABLE IF EXISTS movies"))
-            connection.commit()
+        rows = result.fetchall()
+        columns = [row[1] for row in rows]
+
+        if not columns:
+            # No movies table: create with user_id from the start
             connection.execute(
                 text(
                     """
                     CREATE TABLE movies (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        title TEXT UNIQUE NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        title TEXT NOT NULL,
                         year INTEGER NOT NULL,
                         rating REAL NOT NULL,
-                        poster_url TEXT
+                        poster_url TEXT,
+                        UNIQUE(user_id, title),
+                        FOREIGN KEY (user_id) REFERENCES users(id)
                     )
                     """
                 )
             )
             connection.commit()
+        elif "user_id" not in columns:
+            # Migrate: add user_id, one default user, move existing movies to that user
+            connection.execute(text("INSERT OR IGNORE INTO users (id, name) VALUES (1, 'Default')"))
+            connection.commit()
+            connection.execute(text("ALTER TABLE movies ADD COLUMN user_id INTEGER"))
+            connection.execute(text("UPDATE movies SET user_id = 1 WHERE user_id IS NULL"))
+            connection.commit()
+            # Recreate with proper UNIQUE(user_id, title) - SQLite can't add composite UNIQUE via ALTER
+            connection.execute(text("CREATE TABLE movies_new (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, year INTEGER NOT NULL, rating REAL NOT NULL, poster_url TEXT, UNIQUE(user_id, title))"))
+            connection.execute(text("INSERT INTO movies_new (user_id, title, year, rating, poster_url) SELECT COALESCE(user_id, 1), title, year, rating, COALESCE(poster_url, '') FROM movies"))
+            connection.commit()
+            connection.execute(text("DROP TABLE movies"))
+            connection.execute(text("ALTER TABLE movies_new RENAME TO movies"))
+            connection.commit()
+        else:
+            # Ensure poster_url exists (older migration)
+            if "poster_url" not in columns:
+                try:
+                    connection.execute(text("ALTER TABLE movies ADD COLUMN poster_url TEXT"))
+                    connection.commit()
+                except Exception:
+                    pass
+        connection.commit()
 
 
-_init_db()
+def list_users():
+    """Return list of (id, name) for all users."""
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT id, name FROM users ORDER BY name"))
+        return result.fetchall()
 
 
-def list_movies():
-    """Retrieve all movies from the database."""
+def add_user(name):
+    """Create a new user. Returns user id or None on error."""
+    with engine.connect() as connection:
+        try:
+            connection.execute(text("INSERT INTO users (name) VALUES (:name)"), {"name": name.strip()})
+            connection.commit()
+            result = connection.execute(text("SELECT last_insert_rowid()"))
+            return result.scalar()
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
+
+
+def get_user_by_id(user_id):
+    """Return (id, name) for user or None."""
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT id, name FROM users WHERE id = :id"), {"id": user_id})
+        row = result.fetchone()
+        return row
+
+
+def list_movies(user_id):
+    """Retrieve all movies for the given user."""
     with engine.connect() as connection:
         result = connection.execute(
-            text("SELECT title, year, rating, poster_url FROM movies")
+            text("SELECT title, year, rating, poster_url FROM movies WHERE user_id = :user_id"),
+            {"user_id": user_id},
         )
         rows = result.fetchall()
 
@@ -75,17 +126,18 @@ def list_movies():
     }
 
 
-def add_movie(title, year, rating, poster_url=None):
-    """Add a new movie to the database."""
+def add_movie(user_id, title, year, rating, poster_url=None):
+    """Add a new movie for the given user."""
     poster_url = poster_url if poster_url is not None else ""
     with engine.connect() as connection:
         try:
             connection.execute(
                 text(
-                    "INSERT INTO movies (title, year, rating, poster_url) "
-                    "VALUES (:title, :year, :rating, :poster_url)"
+                    "INSERT INTO movies (user_id, title, year, rating, poster_url) "
+                    "VALUES (:user_id, :title, :year, :rating, :poster_url)"
                 ),
                 {
+                    "user_id": user_id,
                     "title": title,
                     "year": year,
                     "rating": rating,
@@ -98,13 +150,13 @@ def add_movie(title, year, rating, poster_url=None):
             print(f"Error: {e}")
 
 
-def delete_movie(title):
-    """Delete a movie from the database."""
+def delete_movie(user_id, title):
+    """Delete a movie for the given user."""
     with engine.connect() as connection:
         try:
             result = connection.execute(
-                text("DELETE FROM movies WHERE title = :title"),
-                {"title": title},
+                text("DELETE FROM movies WHERE user_id = :user_id AND title = :title"),
+                {"user_id": user_id, "title": title},
             )
             connection.commit()
 
@@ -116,13 +168,13 @@ def delete_movie(title):
             print(f"Error: {e}")
 
 
-def update_movie(title, rating):
-    """Update a movie's rating in the database."""
+def update_movie(user_id, title, rating):
+    """Update a movie's rating for the given user."""
     with engine.connect() as connection:
         try:
             result = connection.execute(
-                text("UPDATE movies SET rating = :rating WHERE title = :title"),
-                {"title": title, "rating": rating},
+                text("UPDATE movies SET rating = :rating WHERE user_id = :user_id AND title = :title"),
+                {"user_id": user_id, "title": title, "rating": rating},
             )
             connection.commit()
 
@@ -132,3 +184,7 @@ def update_movie(title, rating):
                 print(f"Movie '{title}' updated successfully.")
         except Exception as e:
             print(f"Error: {e}")
+
+
+# Run init after function defs so list_movies etc. exist when _init_db is called
+_init_db()
