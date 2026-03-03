@@ -36,4 +36,4 @@ python movies.py
 - **Rating-Histogramm** (Konsole oder PNG)
 - **Website generieren** – erzeugt `_static/index.html` aus den Filmdaten
 
-Die Daten werden in einer SQLite-Datenbank (`movies.db`) gespeichert.
+Die Daten werden in einer SQLite-Datenbank unter `data/movies.db` gespeichert. Das Verzeichnis `data/` wird beim ersten Start angelegt. Die Speicherlogik liegt im Paket `storage/` (z. B. `storage/sql.py`).
