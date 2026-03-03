@@ -15,13 +15,16 @@ def _build_movie_grid(movies):
     lines = []
     for title, data in movies.items():
         year = data.get("year", "")
+        rating = data.get("rating", "")
         poster_url = data.get("poster_url", "") or ""
         note = data.get("note", "") or ""
         title_esc = _escape(title)
         year_esc = _escape(year)
+        rating_esc = _escape(str(rating)) if rating != "" else ""
         poster_esc = _escape(poster_url)
         note_esc = _escape(note)
         note_content = f'<div class="movie-note">{note_esc}</div>' if note_esc else ""
+        rating_node = f'<div class="movie-rating">★ {rating_esc}</div>' if rating_esc else ""
         lines.append(
             "        <li>\n"
             "            <div class=\"movie\">\n"
@@ -31,6 +34,7 @@ def _build_movie_grid(movies):
             "                </div>\n"
             f"                <div class=\"movie-title\">{title_esc}</div>\n"
             f"                <div class=\"movie-year\">{year_esc}</div>\n"
+            f"                {rating_node}\n"
             "            </div>\n"
             "        </li>"
         )

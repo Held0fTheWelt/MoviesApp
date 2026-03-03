@@ -43,8 +43,15 @@ body {
   .movie-year {
     color: #999;
   }
-  
-  
+
+  .movie-rating {
+    font-size: 0.85em;
+    text-align: center;
+    margin-top: 4px;
+    color: #c9a227;
+    font-weight: 600;
+  }
+
   .movie-poster-wrap {
     position: relative;
     display: inline-block;
