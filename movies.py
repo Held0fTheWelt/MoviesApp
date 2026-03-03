@@ -503,7 +503,7 @@ def run_choice(choice, movies):
     elif choice == 10:
         filter_movies(movies)
     elif choice == 11:
-        create_rating_histogram(movies)
+        movies_website.generate_website(movies)
 
 
 def get_choice():
@@ -546,28 +546,37 @@ def main():
     """ Main function of the movies data system"""
     movies = storage.list_movies()  # Load from SQLite (SQLAlchemy)
 
-    # if database is empty, seed with starter movies (no poster_url for seed)
+    # if database is empty, seed with starter movies via OMDb API
     if not movies:
-        seed_movies = {
-            "The Shawshank Redemption": {"rating": 4.5, "year": 1994, "poster_url": ""},
-            "Pulp Fiction": {"rating": 4.8, "year": 1994, "poster_url": ""},
-            "The Room": {"rating": 3.6, "year": 2003, "poster_url": ""},
-            "The Godfather": {"rating": 9.2, "year": 1972, "poster_url": ""},
-            "The Godfather: Part II": {"rating": 3.0, "year": 1974, "poster_url": ""},
-            "The Dark Knight": {"rating": 2.0, "year": 2008, "poster_url": ""},
-            "The Dark": {"rating": 2.0, "year": 2008, "poster_url": ""},
-            "12 Angry Men": {"rating": 6.9, "year": 1957, "poster_url": ""},
-            "Everything Everywhere All At Once": {"rating": 8.9, "year": 2022, "poster_url": ""},
-            "Forrest Gump": {"rating": 8.8, "year": 1994, "poster_url": ""},
-            "Star Wars: Episode V": {"rating": 8.7, "year": 1980, "poster_url": ""},
-        }
-        for title, data in seed_movies.items():
-            storage.add_movie(
-                title,
-                data["year"],
-                data["rating"],
-                data.get("poster_url", ""),
-            )
+        seed_titles = [
+            "The Shawshank Redemption",
+            "Pulp Fiction",
+            "The Room",
+            "The Godfather",
+            "The Godfather: Part II",
+            "The Dark Knight",
+            "12 Angry Men",
+            "Everything Everywhere All At Once",
+            "Forrest Gump",
+            "Star Wars: Episode V - The Empire Strikes Back",
+        ]
+        for search_title in seed_titles:
+            data = fetch_movie_from_omdb(search_title)
+            if data is None:
+                continue
+            api_title = data["title"]
+            if api_title not in movies:
+                storage.add_movie(
+                    data["title"],
+                    data["year"],
+                    data["rating"],
+                    data["poster_url"],
+                )
+                movies[api_title] = {
+                    "rating": data["rating"],
+                    "year": data["year"],
+                    "poster_url": data["poster_url"],
+                }
         movies = storage.list_movies()
     while True:
         show_menu()
