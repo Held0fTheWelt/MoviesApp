@@ -48,6 +48,7 @@ def _init_db():
                         rating REAL NOT NULL,
                         poster_url TEXT,
                         note TEXT,
+                        imdb_id TEXT,
                         UNIQUE(user_id, title),
                         FOREIGN KEY (user_id) REFERENCES users(id)
                     )
@@ -63,8 +64,8 @@ def _init_db():
             connection.execute(text("UPDATE movies SET user_id = 1 WHERE user_id IS NULL"))
             connection.commit()
             # Recreate with proper UNIQUE(user_id, title) - SQLite can't add composite UNIQUE via ALTER
-            connection.execute(text("CREATE TABLE movies_new (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, year INTEGER NOT NULL, rating REAL NOT NULL, poster_url TEXT, note TEXT, UNIQUE(user_id, title))"))
-            connection.execute(text("INSERT INTO movies_new (user_id, title, year, rating, poster_url, note) SELECT COALESCE(user_id, 1), title, year, rating, COALESCE(poster_url, ''), '' FROM movies"))
+            connection.execute(text("CREATE TABLE movies_new (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, year INTEGER NOT NULL, rating REAL NOT NULL, poster_url TEXT, note TEXT, imdb_id TEXT, UNIQUE(user_id, title))"))
+            connection.execute(text("INSERT INTO movies_new (user_id, title, year, rating, poster_url, note, imdb_id) SELECT COALESCE(user_id, 1), title, year, rating, COALESCE(poster_url, ''), '', '' FROM movies"))
             connection.commit()
             connection.execute(text("DROP TABLE movies"))
             connection.execute(text("ALTER TABLE movies_new RENAME TO movies"))
@@ -80,6 +81,12 @@ def _init_db():
             if "note" not in columns:
                 try:
                     connection.execute(text("ALTER TABLE movies ADD COLUMN note TEXT"))
+                    connection.commit()
+                except Exception:
+                    pass
+            if "imdb_id" not in columns:
+                try:
+                    connection.execute(text("ALTER TABLE movies ADD COLUMN imdb_id TEXT"))
                     connection.commit()
                 except Exception:
                     pass
@@ -118,7 +125,7 @@ def list_movies(user_id):
     """Retrieve all movies for the given user."""
     with engine.connect() as connection:
         result = connection.execute(
-            text("SELECT title, year, rating, poster_url, note FROM movies WHERE user_id = :user_id"),
+            text("SELECT title, year, rating, poster_url, note, imdb_id FROM movies WHERE user_id = :user_id"),
             {"user_id": user_id},
         )
         rows = result.fetchall()
@@ -129,21 +136,23 @@ def list_movies(user_id):
             "rating": row[2],
             "poster_url": row[3] or "",
             "note": row[4] or "",
+            "imdb_id": row[5] or "" if len(row) > 5 else "",
         }
         for row in rows
     }
 
 
-def add_movie(user_id, title, year, rating, poster_url=None, note=None):
+def add_movie(user_id, title, year, rating, poster_url=None, note=None, imdb_id=None):
     """Add a new movie for the given user."""
     poster_url = poster_url if poster_url is not None else ""
     note = note if note is not None else ""
+    imdb_id = imdb_id if imdb_id is not None else ""
     with engine.connect() as connection:
         try:
             connection.execute(
                 text(
-                    "INSERT INTO movies (user_id, title, year, rating, poster_url, note) "
-                    "VALUES (:user_id, :title, :year, :rating, :poster_url, :note)"
+                    "INSERT INTO movies (user_id, title, year, rating, poster_url, note, imdb_id) "
+                    "VALUES (:user_id, :title, :year, :rating, :poster_url, :note, :imdb_id)"
                 ),
                 {
                     "user_id": user_id,
@@ -152,6 +161,7 @@ def add_movie(user_id, title, year, rating, poster_url=None, note=None):
                     "rating": rating,
                     "poster_url": poster_url,
                     "note": note,
+                    "imdb_id": imdb_id,
                 },
             )
             connection.commit()

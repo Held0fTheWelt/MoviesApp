@@ -151,6 +151,7 @@ def fetch_movie_from_omdb(search_title):
     year_raw = data.get("Year") or "N/A"
     rating_raw = data.get("imdbRating") or "N/A"
     poster_url = data.get("Poster") or ""
+    imdb_id = data.get("imdbID") or ""
 
     try:
         year = int(year_raw) if year_raw != "N/A" and year_raw.strip() else 0
@@ -167,6 +168,7 @@ def fetch_movie_from_omdb(search_title):
         "year": year,
         "rating": rating,
         "poster_url": poster_url if isinstance(poster_url, str) else "",
+        "imdb_id": imdb_id if isinstance(imdb_id, str) else "",
     }
 
 
@@ -195,11 +197,15 @@ def add_movie(movies, current_user):
         data["year"],
         data["rating"],
         data["poster_url"],
+        note=None,
+        imdb_id=data.get("imdb_id", ""),
     )
     movies[api_title] = {
         "rating": data["rating"],
         "year": data["year"],
         "poster_url": data["poster_url"],
+        "note": "",
+        "imdb_id": data.get("imdb_id", ""),
     }
     print(f"\033[0;32m✅ Movie '{api_title}' added to {current_user[1]}'s collection!\033[0;0m")
 

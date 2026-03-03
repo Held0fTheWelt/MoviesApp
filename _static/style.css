@@ -52,6 +52,12 @@ body {
     font-weight: 600;
   }
 
+  .movie-poster-link {
+    text-decoration: none;
+    color: inherit;
+    display: inline-block;
+  }
+
   .movie-poster-wrap {
     position: relative;
     display: inline-block;

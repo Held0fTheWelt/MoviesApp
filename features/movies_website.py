@@ -18,20 +18,36 @@ def _build_movie_grid(movies):
         rating = data.get("rating", "")
         poster_url = data.get("poster_url", "") or ""
         note = data.get("note", "") or ""
+        imdb_id = (data.get("imdb_id") or "").strip()
         title_esc = _escape(title)
         year_esc = _escape(year)
         rating_esc = _escape(str(rating)) if rating != "" else ""
         poster_esc = _escape(poster_url)
         note_esc = _escape(note)
+        imdb_id_esc = _escape(imdb_id)
         note_content = f'<div class="movie-note">{note_esc}</div>' if note_esc else ""
         rating_node = f'<div class="movie-rating">★ {rating_esc}</div>' if rating_esc else ""
+        imdb_url = f"https://www.imdb.com/title/{imdb_id_esc}/" if imdb_id_esc else ""
+        if imdb_url:
+            poster_block = (
+                f'<a class="movie-poster-link" href="{imdb_url}" target="_blank" rel="noopener noreferrer">\n'
+                "                <div class=\"movie-poster-wrap\">\n"
+                f"                <img class=\"movie-poster\" src=\"{poster_esc}\" alt=\"{title_esc}\">\n"
+                f"                {note_content}\n"
+                "                </div>\n"
+                "                </a>"
+            )
+        else:
+            poster_block = (
+                "                <div class=\"movie-poster-wrap\">\n"
+                f"                <img class=\"movie-poster\" src=\"{poster_esc}\" alt=\"{title_esc}\">\n"
+                f"                {note_content}\n"
+                "                </div>"
+            )
         lines.append(
             "        <li>\n"
             "            <div class=\"movie\">\n"
-            "                <div class=\"movie-poster-wrap\">\n"
-            f"                <img class=\"movie-poster\" src=\"{poster_esc}\" alt=\"{title_esc}\">\n"
-            f"                {note_content}\n"
-            "                </div>\n"
+            f"                {poster_block}\n"
             f"                <div class=\"movie-title\">{title_esc}</div>\n"
             f"                <div class=\"movie-year\">{year_esc}</div>\n"
             f"                {rating_node}\n"
