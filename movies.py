@@ -33,7 +33,7 @@ def get_movie_year(option=0):
       2 -> optional end year (filter; blank = None)
     """
     while True:
-        prompt = "Enter ye2ar of release: "
+        prompt = "Enter year of release: "
         if option == 1:
             prompt = "Enter start year of releases (leave blank for no start year): "
         elif option == 2:
